@@ -61,6 +61,10 @@ jobs:
 
             # Verify nginx serves the new build.
             sleep 2
-            curl -fsS http://localhost:8083/puzzles.js | head -c 60; echo
-            curl -fsS http://localhost:8083/ | grep -q 'src="puzzles.js"'
+            # Save to files rather than piping into head, which would cut curl
+            # off mid-download and fail the step under pipefail.
+            curl -fsS http://localhost:8083/puzzles.js -o "$tmp/live-puzzles.js"
+            curl -fsS http://localhost:8083/ -o "$tmp/live-index.html"
+            cmp "$tmp/live-puzzles.js" puzzles.js
+            grep -q 'src="puzzles.js"' "$tmp/live-index.html"
             echo "Deployed ${SHA}"
