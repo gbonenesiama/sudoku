@@ -2,890 +2,1274 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Sudoku</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Zilla+Slab:wght@700&display=swap" rel="stylesheet" />
   <style>
     /* ─── Reset & Tokens ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+    /* Palette mirrors NYT Games Sudoku: white board, near-black givens,
+       blue entries, yellow selection, grey peers, red conflicts. */
     :root {
-      --bg:          #f9f9f7;
+      --bg:          #ffffff;
       --surface:     #ffffff;
-      --border:      #c9c9c9;
-      --border-box:  #222222;
-      --text:        #1a1a1a;
-      --text-muted:  #888888;
-      --given:       #1a1a1a;
-      --user-num:    #2563eb;
-      --error-num:   #dc2626;
-      --note-num:    #6b7280;
-      --sel-bg:      #bbdefb;
-      --peer-bg:     #e3f0fd;
-      --same-bg:     #c8e6fb;
-      --error-bg:    #fee2e2;
-      --btn-bg:      #1a1a1a;
+      --surface-2:   #f4f4f4;
+      --line:        #a3a3a3;
+      --line-strong: #121212;
+      --text:        #121212;
+      --muted:       #5a5a5a;
+      --given:       #121212;
+      --accent:      #346eb7;
+      --user-num:    #346eb7;
+      --error:       #e0303b;
+      --note:        #4a4a4a;
+      --sel-bg:      #f8cd05;
+      --sel-text:    #121212;
+      --peer-bg:     #e2e2e2;
+      --same-bg:     #c9dcf3;
+      --same-note:   #1f5aa6;
+      --error-bg:    #ffd9dc;
+      --success:     #1e8a4c;
+      --btn:         #121212;
       --btn-text:    #ffffff;
-      --pad-bg:      #f0f0ee;
-      --pad-hover:   #e0e0de;
-      --pad-active:  #d0d0ce;
-      --shadow:      rgba(0,0,0,.10);
-      --radius:      12px;
-      --font:        'Georgia', serif;
-      --mono:        'Courier New', monospace;
-      --transition:  .15s ease;
+      --key-bg:      #dfdfdf;
+      --key-hover:   #d0d0d0;
+      --key-border:  #979797;
+      --shadow:      0 10px 40px rgba(18,18,18,.22);
+      --radius:      10px;
+      --sans:        'Libre Franklin', 'Franklin Gothic Medium', 'Helvetica Neue', Arial, sans-serif;
+      --serif:       'Zilla Slab', 'Rockwell', Georgia, serif;
+      --t:           .15s ease;
+      color-scheme: light;
     }
 
     [data-theme="dark"] {
       --bg:          #121212;
-      --surface:     #1e1e1e;
-      --border:      #3a3a3a;
-      --border-box:  #eeeeee;
-      --text:        #e8e8e8;
-      --text-muted:  #888888;
-      --given:       #e8e8e8;
-      --user-num:    #60a5fa;
-      --error-num:   #f87171;
-      --note-num:    #9ca3af;
-      --sel-bg:      #1e3a5f;
-      --peer-bg:     #172033;
-      --same-bg:     #1a3050;
-      --error-bg:    #3b1717;
-      --btn-bg:      #e8e8e8;
+      --surface:     #1b1b1b;
+      --surface-2:   #2a2a2a;
+      --line:        #5a5a5a;
+      --line-strong: #dfdfdf;
+      --text:        #f8f8f8;
+      --muted:       #bbbbbb;
+      --given:       #f8f8f8;
+      --accent:      #6ba1dd;
+      --user-num:    #7fb2ee;
+      --error:       #ff6b74;
+      --note:        #d0d0d0;
+      --sel-bg:      #f8cd05;
+      --sel-text:    #121212;
+      --peer-bg:     #363636;
+      --same-bg:     #2a4a75;
+      --same-note:   #9cc4f2;
+      --error-bg:    #5a2226;
+      --success:     #4cc07c;
+      --btn:         #f8f8f8;
       --btn-text:    #121212;
-      --pad-bg:      #2a2a2a;
-      --pad-hover:   #333333;
-      --pad-active:  #3d3d3d;
-      --shadow:      rgba(0,0,0,.40);
+      --key-bg:      #363636;
+      --key-hover:   #424242;
+      --key-border:  #727272;
+      --shadow:      0 10px 40px rgba(0,0,0,.6);
+      color-scheme: dark;
     }
 
-    /* ─── Layout ──────────────────────────────────────────────────── */
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: var(--font);
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
       min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px 8px 32px;
-      transition: background var(--transition), color var(--transition);
+      transition: background var(--t), color var(--t);
+      -webkit-tap-highlight-color: transparent;
     }
 
+    .icon { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+    /* ─── Header ──────────────────────────────────────────────────── */
     header {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: -.02em;
-    }
-
-    #theme-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.3rem;
-      color: var(--text);
-      line-height: 1;
-      padding: 4px;
-      border-radius: 50%;
-      transition: background var(--transition);
-    }
-    #theme-btn:hover { background: var(--pad-hover); }
-
-    /* ─── Controls bar ────────────────────────────────────────────── */
-    #controls {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-
-    .diff-btn {
-      flex: 1;
-      min-width: 70px;
-      padding: 7px 4px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
+      border-bottom: 1px solid var(--line);
       background: var(--surface);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: .85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color var(--transition), background var(--transition);
     }
-    .diff-btn.active {
-      border-color: var(--btn-bg);
-      background: var(--btn-bg);
-      color: var(--btn-text);
+    .header-inner {
+      max-width: 980px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      gap: 12px;
+    }
+    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    h1 { font-family: var(--serif); font-size: 1.9rem; font-weight: 700; letter-spacing: -.01em; line-height: 1; }
+    #puzzle-date { color: var(--text); font-size: 1rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-actions { display: flex; gap: 2px; }
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center;
+      transition: background var(--t);
+    }
+    .icon-btn:hover { background: var(--surface-2); }
+
+    /* ─── Difficulty tabs ─────────────────────────────────────────── */
+    .tabs-wrap { border-bottom: 1px solid var(--line); background: var(--surface); }
+    .tabs {
+      max-width: 980px; margin: 0 auto; padding: 0 16px;
+      display: flex; justify-content: center; gap: 28px;
+    }
+    .tab {
+      padding: 12px 2px 10px;
+      font-weight: 700; font-size: 1.05rem; color: var(--muted);
+      border-bottom: 4px solid transparent;
+      transition: color var(--t), border-color var(--t);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-bottom-color: var(--line-strong); }
+    .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: none; }
+    .tab.done .dot { display: inline-block; }
+
+    /* ─── Main layout ─────────────────────────────────────────────── */
+    main {
+      max-width: 980px; margin: 0 auto;
+      padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      gap: 14px;
+    }
+    .play-col, .side-col { width: 100%; max-width: 580px; }
+
+    @media (min-width: 900px) {
+      main {
+        grid-template-columns: minmax(0, 580px) 300px;
+        justify-content: center; align-items: start;
+        gap: 36px; padding-top: 28px;
+      }
+      .side-col { padding-top: 42px; }
     }
 
-    #new-game-btn {
-      padding: 7px 14px;
-      border-radius: 8px;
-      border: 2px solid var(--btn-bg);
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      font-family: var(--font);
-      font-size: .85rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity var(--transition);
+    /* ─── Status bar ──────────────────────────────────────────────── */
+    #status {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; min-height: 32px;
+      font-size: 1rem; color: var(--text); font-weight: 500;
     }
-    #new-game-btn:hover { opacity: .8; }
-
-    /* ─── Info bar ────────────────────────────────────────────────── */
-    #info-bar {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: .85rem;
-      color: var(--text-muted);
-    }
-
-    #timer { font-variant-numeric: tabular-nums; }
-
-    #mistakes-label { }
+    .status-left { display: flex; gap: 14px; align-items: center; }
+    #mistakes-label[hidden] { display: none; }
+    #mistakes-label strong { color: var(--text); font-weight: 700; margin-left: 4px; }
+    #mistakes-label.bad strong { color: var(--error); }
+    .timer-group { display: flex; align-items: center; gap: 4px; }
+    #timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); font-size: 1.15rem; min-width: 3.2em; text-align: right; }
+    #pause-btn { width: 32px; height: 32px; }
+    #pause-btn .icon { width: 18px; height: 18px; }
 
     /* ─── Board ───────────────────────────────────────────────────── */
-    #board-wrap {
-      width: 100%;
-      max-width: 480px;
-    }
+    #board-wrap { position: relative; width: 100%; }
 
     #board {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
-      border: 2.5px solid var(--border-box);
-      border-radius: 4px;
-      overflow: hidden;
+      grid-template-rows: repeat(9, 1fr);
+      border: 3px solid var(--line-strong);
       aspect-ratio: 1;
       width: 100%;
-      user-select: none;
+      user-select: none; -webkit-user-select: none;
       touch-action: manipulation;
+      background: var(--surface);
+      container-type: inline-size;
     }
 
     .cell {
       position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-right: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       cursor: pointer;
       background: var(--surface);
-      transition: background var(--transition);
+      transition: background .12s ease;
       overflow: hidden;
+      font-size: 7.2cqi;
     }
+    .cell.c3, .cell.c6 { border-right: 3px solid var(--line-strong); }
+    .cell.c9 { border-right: none; }
+    .cell.r3, .cell.r6 { border-bottom: 3px solid var(--line-strong); }
+    .cell.r9 { border-bottom: none; }
 
-    /* Box borders — right */
-    .cell:nth-child(3n) { border-right: 2.5px solid var(--border-box); }
-    .cell:nth-child(9n) { border-right: none; }
-
-    /* Box borders — bottom (rows 3 and 6) */
-    .cell.row-3 { border-bottom: 2.5px solid var(--border-box); }
-    .cell.row-6 { border-bottom: 2.5px solid var(--border-box); }
-    .cell.row-9 { border-bottom: none; }
-
-    /* Highlight states */
-    .cell.peer    { background: var(--peer-bg); }
-    .cell.same    { background: var(--same-bg); }
+    .cell.peer     { background: var(--peer-bg); }
+    .cell.same     { background: var(--same-bg); }
+    .cell.conflict { background: var(--error-bg); }
     .cell.selected { background: var(--sel-bg); }
-    .cell.error-cell { background: var(--error-bg); }
+    .cell.selected .cell-num:not(.error), .cell.selected .note-digit { color: var(--sel-text); }
 
-    .cell-num {
-      font-size: clamp(.9rem, 3.5vw, 1.4rem);
-      font-weight: 600;
-      line-height: 1;
-      color: var(--given);
-      pointer-events: none;
-    }
+    .cell-num { line-height: 1; font-weight: 400; color: var(--given); pointer-events: none; }
+    .cell.given .cell-num { font-weight: 600; }
     .cell-num.user  { color: var(--user-num); }
-    .cell-num.error { color: var(--error-num); }
+    .cell-num.error { color: var(--error); }
+    .cell.pop .cell-num { animation: pop-in .18s ease-out; }
+    @keyframes pop-in { from { transform: scale(.6); opacity: .3; } to { transform: scale(1); opacity: 1; } }
 
-    /* Notes grid */
     .notes-grid {
-      position: absolute;
-      inset: 1px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
+      position: absolute; inset: 2px;
+      display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
       pointer-events: none;
     }
     .note-digit {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(.4rem, 1.5vw, .6rem);
-      color: var(--note-num);
-      font-family: var(--mono);
-      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3cqi; line-height: 1;
+      color: var(--note); font-weight: 600;
     }
+    .note-digit.hl { color: var(--same-note); font-weight: 800; }
 
-    /* ─── Action toolbar ──────────────────────────────────────────── */
+    /* Unit-complete flash and win wave */
+    .cell.flash { animation: flash .6s ease; }
+    @keyframes flash { 0%,100% { } 40% { background: var(--same-bg); } }
+    .cell.wave { animation: wave .5s ease both; }
+    @keyframes wave { 0% { transform: scale(1); } 45% { transform: scale(.82); background: var(--sel-bg); } 100% { transform: scale(1); } }
+
+    /* Pause overlay */
+    #paused {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      z-index: 5; text-align: center;
+    }
+    #paused.show { display: flex; }
+    #paused h2 { font-family: var(--serif); font-size: 1.5rem; }
+    #paused p { color: var(--muted); font-size: .95rem; }
+
+    /* ─── Tools ───────────────────────────────────────────────────── */
     #toolbar {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-      justify-content: center;
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 6px; margin-bottom: 12px;
     }
-
+    @media (max-width: 899px) { #toolbar { margin-top: 2px; } }
     .tool-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 8px 12px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: .7rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color var(--transition), background var(--transition);
-      min-width: 56px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 2px 6px;
+      border-radius: 12px;
+      font-size: .82rem; font-weight: 600; color: var(--text);
+      transition: background var(--t), color var(--t);
+      position: relative;
     }
-    .tool-btn .icon { font-size: 1.1rem; }
-    .tool-btn.active {
-      border-color: var(--user-num);
-      color: var(--user-num);
+    .tool-btn:hover { background: var(--surface-2); }
+    .tool-btn:disabled { opacity: .35; cursor: default; background: none; }
+    .tool-btn .badge {
+      position: absolute; top: 4px; right: calc(50% - 26px);
+      font-size: .6rem; font-weight: 800; letter-spacing: .03em;
+      padding: 1px 5px; border-radius: 99px;
+      background: var(--key-bg); color: var(--muted);
     }
-    .tool-btn:hover { background: var(--pad-hover); }
+    .tool-btn.on { color: var(--accent); }
+    .tool-btn.on .badge { background: var(--accent); color: var(--btn-text); }
 
     /* ─── Number Pad ──────────────────────────────────────────────── */
-    #numpad {
-      display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      gap: 6px;
-      width: 100%;
-      max-width: 480px;
-      margin-top: 12px;
-    }
+    #numpad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+    @media (min-width: 900px) { #numpad { grid-template-columns: repeat(3, 1fr); gap: 8px; } }
 
     .num-btn {
-      aspect-ratio: 1;
-      border: none;
-      border-radius: 10px;
-      background: var(--pad-bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: clamp(1rem, 4vw, 1.5rem);
-      font-weight: 700;
-      cursor: pointer;
-      transition: background var(--transition), transform .08s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .num-btn:hover   { background: var(--pad-hover); }
-    .num-btn:active  { background: var(--pad-active); transform: scale(.93); }
-    .num-btn.used    { color: var(--text-muted); }
-
-    /* ─── Congratulations overlay ─────────────────────────────────── */
-    #congrats {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(4px);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    #congrats.show { display: flex; }
-
-    #congrats-box {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 40px 32px;
-      text-align: center;
-      box-shadow: 0 20px 60px var(--shadow);
-      max-width: 340px;
-      width: 90%;
-      animation: pop .3s cubic-bezier(.17,.67,.43,1.4);
-    }
-    @keyframes pop {
-      from { transform: scale(.75); opacity: 0; }
-      to   { transform: scale(1);   opacity: 1; }
-    }
-
-    #congrats-box h2 { font-size: 2rem; margin-bottom: 8px; }
-    #congrats-box p  { color: var(--text-muted); margin-bottom: 24px; }
-
-    #play-again-btn {
-      padding: 12px 28px;
       border-radius: 8px;
-      border: none;
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      font-family: var(--font);
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity var(--transition);
+      background: var(--key-bg);
+      border: 1px solid var(--key-border);
+      color: var(--text);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      aspect-ratio: 3 / 4;
+      font-size: clamp(1.35rem, 6vw, 1.9rem); font-weight: 500; line-height: 1;
+      transition: background var(--t), transform .08s, opacity var(--t);
+      position: relative;
     }
-    #play-again-btn:hover { opacity: .8; }
+    @media (min-width: 900px) { .num-btn { aspect-ratio: 1.15; font-size: 2.1rem; } }
+    .num-btn:hover  { background: var(--key-hover); }
+    .num-btn:active { transform: scale(.94); }
+    .num-btn .left { font-size: .7rem; font-weight: 700; color: var(--muted); margin-top: 4px; }
+    .num-btn.done { opacity: .35; }
+    .num-btn.done .left { visibility: hidden; }
+    body.notes-on .num-btn { color: var(--accent); }
+    body.notes-on .num-btn .digit { font-size: .72em; font-weight: 500; }
 
-    /* ─── Responsive tweaks ───────────────────────────────────────── */
-    @media (max-width: 400px) {
-      .tool-btn { padding: 6px 8px; min-width: 44px; font-size: .65rem; }
-      .tool-btn .icon { font-size: .95rem; }
+    .side-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .pill-btn {
+      flex: 1;
+      padding: 11px 14px; border-radius: 99px;
+      border: 1.5px solid var(--line-strong);
+      font-weight: 700; font-size: .88rem;
+      transition: background var(--t), color var(--t), opacity var(--t);
+    }
+    .pill-btn:hover { background: var(--surface-2); }
+    .pill-btn.primary { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
+    .pill-btn.primary:hover { opacity: .85; background: var(--btn); }
+
+    .kbd-help { margin-top: 16px; font-size: .85rem; color: var(--muted); line-height: 1.7; display: none; }
+    @media (min-width: 900px) and (hover: hover) { .kbd-help { display: block; } }
+    kbd {
+      font-family: var(--sans); font-size: .72rem; font-weight: 600;
+      padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line);
+      background: var(--surface); color: var(--text);
+    }
+
+    /* ─── Modals ──────────────────────────────────────────────────── */
+    .modal {
+      position: fixed; inset: 0; z-index: 50;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(10,10,12,.45);
+      padding: 16px;
+    }
+    .modal.show { display: flex; animation: fade .18s ease; }
+    @keyframes fade { from { opacity: 0; } }
+    .modal-box {
+      background: var(--surface); color: var(--text);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      width: 100%; max-width: 420px; max-height: calc(100dvh - 32px);
+      display: flex; flex-direction: column;
+      animation: rise .22s cubic-bezier(.2,.8,.3,1.1);
+    }
+    @keyframes rise { from { transform: translateY(14px) scale(.98); opacity: 0; } }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 16px 10px 22px;
+    }
+    .modal-head h2 { font-family: var(--serif); font-size: 1.25rem; }
+    .modal-body { padding: 4px 22px 22px; overflow-y: auto; }
+
+    /* Win */
+    #win .modal-box { text-align: center; }
+    #win .modal-body { padding-top: 26px; }
+    .win-mark {
+      width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px;
+      background: var(--success); color: #fff; display: grid; place-items: center;
+    }
+    .win-mark .icon { width: 34px; height: 34px; stroke-width: 2.6; }
+    #win h2 { font-family: var(--serif); font-size: 1.7rem; margin-bottom: 4px; }
+    #win-sub { color: var(--muted); margin-bottom: 20px; }
+    .win-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 22px; }
+    .win-stat { background: var(--surface-2); border-radius: 10px; padding: 12px 4px; }
+    .win-stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .win-stat span { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    #win-best { font-size: .85rem; color: var(--success); font-weight: 700; margin: -10px 0 18px; min-height: 1em; }
+
+    /* Archive */
+    .seg { display: flex; background: var(--surface-2); border-radius: 99px; padding: 3px; margin-bottom: 14px; }
+    .seg button { flex: 1; padding: 7px 0; border-radius: 99px; font-weight: 600; font-size: .85rem; color: var(--muted); }
+    .seg button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+    .archive-summary { font-size: .82rem; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .link-btn { color: var(--accent); font-weight: 700; font-size: .82rem; }
+    .month { margin-bottom: 16px; }
+    .month h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 8px; }
+    .dow, .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .dow span { text-align: center; font-size: .66rem; color: var(--muted); font-weight: 600; }
+    .days { margin-top: 4px; }
+    .day {
+      aspect-ratio: 1; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: .85rem; font-weight: 600;
+      transition: background var(--t);
+      position: relative;
+    }
+    .day:hover:not(:disabled) { background: var(--surface-2); }
+    .day:disabled { color: var(--line); cursor: default; }
+    .day.progress { box-shadow: inset 0 0 0 2px var(--accent); }
+    .day.solved { background: var(--success); color: #fff; }
+    .day.solved:hover { background: var(--success); opacity: .85; }
+    .day.current::after {
+      content: ''; position: absolute; bottom: -3px; left: 50%; width: 4px; height: 4px;
+      margin-left: -2px; border-radius: 50%; background: var(--text);
+    }
+    .legend { display: flex; gap: 14px; font-size: .75rem; color: var(--muted); margin-bottom: 14px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stats-grid .win-stat b { font-size: 1.15rem; }
+
+    /* Settings */
+    .setting { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .setting:last-child { border-bottom: none; }
+    .setting b { display: block; font-size: .92rem; font-weight: 600; }
+    .setting small { color: var(--muted); font-size: .78rem; }
+    .switch { position: relative; width: 44px; height: 26px; flex: none; }
+    .switch input { opacity: 0; width: 100%; height: 100%; position: absolute; cursor: pointer; margin: 0; z-index: 1; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--line); transition: background var(--t); }
+    .switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform var(--t); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+    .switch input:checked + span { background: var(--accent); }
+    .switch input:checked + span::after { transform: translateX(18px); }
+    .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .help p, .help li { font-size: .9rem; line-height: 1.55; }
+    .help ul { padding-left: 18px; margin: 8px 0 12px; }
+    .help h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 14px 0 6px; }
+    .credit { font-size: .75rem; color: var(--muted); margin-top: 14px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 20px); opacity: 0;
+      background: var(--btn); color: var(--btn-text);
+      padding: 10px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600;
+      pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60;
+      max-width: calc(100% - 32px); text-align: center;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 420px) {
+      h1 { font-size: 1.3rem; }
+      .brand { gap: 8px; }
+      #puzzle-date { font-size: .8rem; }
+      .icon-btn { width: 36px; height: 36px; }
+      .tabs { gap: 22px; }
+      main { padding-top: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
 
-<!-- Header -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.6-3 4.5M12 17.5h.01"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-erase" viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m17 9-6 6M11 9l6 6"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-4 11.6c.6.5 1 1.2 1 2V16h6v-.1c0-.8.4-1.5 1-2a6.5 6.5 0 0 0-4-11.4z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+</svg>
+
 <header>
-  <h1>Sudoku</h1>
-  <button id="theme-btn" aria-label="Toggle dark mode">🌙</button>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>Sudoku</h1>
+      <span id="puzzle-date"></span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="archive-btn" aria-label="Puzzle archive" title="Archive"><svg class="icon"><use href="#i-calendar"/></svg></button>
+      <button class="icon-btn" id="stats-btn" aria-label="Statistics" title="Statistics"><svg class="icon"><use href="#i-chart"/></svg></button>
+      <button class="icon-btn" id="help-btn" aria-label="How to play" title="How to play"><svg class="icon"><use href="#i-help"/></svg></button>
+      <button class="icon-btn" id="settings-btn" aria-label="Settings" title="Settings"><svg class="icon"><use href="#i-gear"/></svg></button>
+    </div>
+  </div>
 </header>
 
-<!-- Difficulty + New Game -->
-<div id="controls">
-  <button class="diff-btn active" data-diff="easy">Easy</button>
-  <button class="diff-btn"        data-diff="medium">Medium</button>
-  <button class="diff-btn"        data-diff="hard">Hard</button>
-  <button id="new-game-btn">New Game</button>
-</div>
+<nav class="tabs-wrap" aria-label="Difficulty">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-level="easy">Easy<span class="dot"></span></button>
+    <button class="tab" role="tab" data-level="medium">Medium<span class="dot"></span></button>
+    <button class="tab" role="tab" data-level="hard">Hard<span class="dot"></span></button>
+  </div>
+</nav>
 
-<!-- Timer / Mistakes -->
-<div id="info-bar">
-  <span id="mistakes-label">Mistakes: <strong id="mistakes-count">0</strong></span>
-  <span id="timer">0:00</span>
-</div>
+<main>
+  <section class="play-col">
+    <div id="status">
+      <div class="status-left">
+        <span id="mistakes-label">Mistakes <strong id="mistakes-count">0</strong></span>
+      </div>
+      <div class="timer-group">
+        <span id="timer" aria-live="off">0:00</span>
+        <button class="icon-btn" id="pause-btn" aria-label="Pause"><svg class="icon"><use href="#i-pause"/></svg></button>
+      </div>
+    </div>
+    <div id="board-wrap">
+      <div id="board" role="grid" aria-label="Sudoku board"></div>
+      <div id="paused">
+        <h2>Paused</h2>
+        <p id="paused-sub"></p>
+        <button class="pill-btn primary" id="resume-btn" style="flex:none;padding:11px 28px">Resume</button>
+      </div>
+    </div>
+  </section>
 
-<!-- Board -->
-<div id="board-wrap">
-  <div id="board"></div>
-</div>
+  <section class="side-col">
+    <div id="toolbar">
+      <button class="tool-btn" id="undo-btn"><svg class="icon"><use href="#i-undo"/></svg>Undo</button>
+      <button class="tool-btn" id="erase-btn"><svg class="icon"><use href="#i-erase"/></svg>Erase</button>
+      <button class="tool-btn" id="notes-btn" aria-pressed="false"><svg class="icon"><use href="#i-pencil"/></svg>Notes<span class="badge">OFF</span></button>
+      <button class="tool-btn" id="auto-btn" title="Fill in every possible candidate"><svg class="icon"><use href="#i-grid"/></svg>Candidates</button>
+      <button class="tool-btn" id="hint-btn"><svg class="icon"><use href="#i-bulb"/></svg>Hint</button>
+    </div>
+    <div id="numpad"></div>
+    <div class="side-actions">
+      <button class="pill-btn" id="restart-btn">Restart</button>
+      <button class="pill-btn primary" id="next-btn">New puzzle</button>
+    </div>
+    <div class="kbd-help">
+      <kbd>1</kbd>–<kbd>9</kbd> place &nbsp;·&nbsp; <kbd>Shift</kbd>+digit note &nbsp;·&nbsp; <kbd>N</kbd> notes mode<br>
+      <kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> move &nbsp;·&nbsp; <kbd>⌫</kbd> erase &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo<br>
+      <kbd>H</kbd> hint &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>Esc</kbd> deselect
+    </div>
+  </section>
+</main>
 
-<!-- Toolbar -->
-<div id="toolbar">
-  <button class="tool-btn" id="undo-btn">
-    <span class="icon">↩</span>Undo
-  </button>
-  <button class="tool-btn" id="erase-btn">
-    <span class="icon">⌫</span>Erase
-  </button>
-  <button class="tool-btn" id="notes-btn">
-    <span class="icon">✏️</span>Notes
-  </button>
-  <button class="tool-btn" id="hint-btn">
-    <span class="icon">💡</span>Hint
-  </button>
-</div>
-
-<!-- Number Pad -->
-<div id="numpad"></div>
-
-<!-- Congratulations Overlay -->
-<div id="congrats">
-  <div id="congrats-box">
-    <h2>🎉 Solved!</h2>
-    <p id="congrats-msg">Congratulations! You completed the puzzle.</p>
-    <button id="play-again-btn">Play Again</button>
+<!-- Win -->
+<div class="modal" id="win" role="dialog" aria-modal="true" aria-labelledby="win-title">
+  <div class="modal-box">
+    <div class="modal-body">
+      <div class="win-mark"><svg class="icon"><use href="#i-check"/></svg></div>
+      <h2 id="win-title">Solved!</h2>
+      <p id="win-sub"></p>
+      <div class="win-stats">
+        <div class="win-stat"><b id="win-time">0:00</b><span>Time</span></div>
+        <div class="win-stat"><b id="win-mistakes">0</b><span>Mistakes</span></div>
+        <div class="win-stat"><b id="win-hints">0</b><span>Hints</span></div>
+      </div>
+      <div id="win-best"></div>
+      <div class="side-actions" style="margin-top:0">
+        <button class="pill-btn" data-open="archive">Archive</button>
+        <button class="pill-btn primary" id="win-next-btn">Next puzzle</button>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Archive -->
+<div class="modal" id="archive" role="dialog" aria-modal="true" aria-labelledby="archive-title">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="archive-title">Archive</h2><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body">
+      <div class="seg" id="archive-seg">
+        <button data-level="easy">Easy</button><button data-level="medium">Medium</button><button data-level="hard">Hard</button>
+      </div>
+      <div class="archive-summary"><span id="archive-count"></span><button class="link-btn" id="random-btn">Random unsolved</button></div>
+      <div class="legend"><span><i style="background:var(--success)"></i>Solved</span><span><i style="box-shadow:inset 0 0 0 2px var(--accent)"></i>In progress</span></div>
+      <div id="archive-months"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="modal" id="stats" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="stats-title">Statistics</h2><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body" id="stats-body"></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="modal" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="settings-title">Settings</h2><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body">
+      <label class="setting"><div><b>Auto-check mistakes</b><small>Mark wrong digits red and count mistakes. Off: only rule conflicts are shown.</small></div><span class="switch"><input type="checkbox" data-setting="autoCheck"><span></span></span></label>
+      <label class="setting"><div><b>Highlight row, column &amp; box</b><small>Shade the selected cell's peers.</small></div><span class="switch"><input type="checkbox" data-setting="peers"><span></span></span></label>
+      <label class="setting"><div><b>Highlight matching digits</b><small>Including matching notes.</small></div><span class="switch"><input type="checkbox" data-setting="sameDigits"><span></span></span></label>
+      <label class="setting"><div><b>Auto-remove notes</b><small>Clear a digit from peer notes when you place it.</small></div><span class="switch"><input type="checkbox" data-setting="autoNotes"><span></span></span></label>
+      <label class="setting"><div><b>Show timer</b></div><span class="switch"><input type="checkbox" data-setting="showTimer"><span></span></span></label>
+      <label class="setting"><div><b>Dark mode</b></div><span class="switch"><input type="checkbox" id="dark-toggle"><span></span></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- Help -->
+<div class="modal" id="help" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="help-title">How to play</h2><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body help">
+      <p>Fill the grid so every row, every column and every 3×3 box contains the digits 1 through 9 exactly once.</p>
+      <h3>Tips</h3>
+      <ul>
+        <li>Turn on <b>Notes</b> (or hold <kbd>Shift</kbd>) to pencil in candidates.</li>
+        <li><b>Candidates</b> fills every legal note at once, which helps on Hard puzzles.</li>
+        <li><b>Hint</b> reveals the selected cell, or a random one if nothing is selected.</li>
+        <li>Your progress saves automatically. Pick up any day from the <b>Archive</b>.</li>
+      </ul>
+      <h3>Difficulty</h3>
+      <p>Easy puzzles fall to singles. Medium ones need pairs and pointing. Hard ones usually need advanced techniques such as X-Wings or chains.</p>
+      <p class="credit">Puzzles are from The New York Times daily Sudoku, collected by the open-source <a href="https://github.com/iturki/nyt-sudoku-archive" target="_blank" rel="noopener" style="color:var(--accent)">nyt-sudoku-archive</a> project.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="puzzles.js"></script>
 <script>
 /* ================================================================
-   SUDOKU ENGINE
+   SOLVER: bitmask backtracking with most-constrained-cell heuristic
    ================================================================ */
-
-/** Fill grid using backtracking. Returns true if solved. */
-function solve(grid, limit = 1) {
-  const results = [];
-  _solve(grid, results, limit);
-  return results;
-}
-
-function _solve(grid, results, limit) {
-  if (results.length >= limit) return;
-  const empty = findEmpty(grid);
-  if (!empty) { results.push(grid.slice()); return; }
-  const [r, c] = empty;
-  const idx = r * 9 + c;
-  const nums = shuffle([1,2,3,4,5,6,7,8,9]);
-  for (const n of nums) {
-    if (isValid(grid, r, c, n)) {
-      grid[idx] = n;
-      _solve(grid, results, limit);
-      if (results.length >= limit) return;
-      grid[idx] = 0;
-    }
+const ROW = i => (i / 9) | 0;
+const COL = i => i % 9;
+const BOX = i => ((ROW(i) / 3) | 0) * 3 + ((COL(i) / 3) | 0);
+const PEERS = Array.from({ length: 81 }, (_, i) => {
+  const s = [];
+  for (let j = 0; j < 81; j++) {
+    if (j !== i && (ROW(j) === ROW(i) || COL(j) === COL(i) || BOX(j) === BOX(i))) s.push(j);
   }
-}
+  return s;
+});
+const popcount = m => { let c = 0; while (m) { m &= m - 1; c++; } return c; };
 
-function findEmpty(grid) {
+function solveGrid(input) {
+  const g = input.slice();
+  const rows = new Array(9).fill(0), cols = new Array(9).fill(0), boxes = new Array(9).fill(0);
   for (let i = 0; i < 81; i++) {
-    if (grid[i] === 0) return [Math.floor(i / 9), i % 9];
+    if (g[i]) { const b = 1 << g[i]; rows[ROW(i)] |= b; cols[COL(i)] |= b; boxes[BOX(i)] |= b; }
   }
-  return null;
-}
-
-function isValid(grid, row, col, num) {
-  // row
-  for (let c = 0; c < 9; c++) {
-    if (c !== col && grid[row * 9 + c] === num) return false;
-  }
-  // col
-  for (let r = 0; r < 9; r++) {
-    if (r !== row && grid[r * 9 + col] === num) return false;
-  }
-  // box
-  const br = Math.floor(row / 3) * 3;
-  const bc = Math.floor(col / 3) * 3;
-  for (let dr = 0; dr < 3; dr++) {
-    for (let dc = 0; dc < 3; dc++) {
-      const nr = br + dr, nc = bc + dc;
-      if ((nr !== row || nc !== col) && grid[nr * 9 + nc] === num) return false;
+  const rec = () => {
+    let best = -1, bestMask = 0, bestCount = 10;
+    for (let i = 0; i < 81; i++) {
+      if (g[i]) continue;
+      const m = ~(rows[ROW(i)] | cols[COL(i)] | boxes[BOX(i)]) & 0x3fe;
+      const c = popcount(m);
+      if (c < bestCount) { best = i; bestMask = m; bestCount = c; if (c <= 1) break; }
     }
-  }
-  return true;
-}
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-/** Generate a fully solved grid */
-function generateSolved() {
-  const grid = new Array(81).fill(0);
-  _solve(grid, [{}], 1); // warm shuffle
-  const results = [];
-  const empty = new Array(81).fill(0);
-  _solve(empty, results, 1);
-  return results[0];
-}
-
-/** Generate a puzzle by removing cells until target givens remain */
-function generatePuzzle(givens) {
-  const solution = generateSolved();
-  const puzzle = solution.slice();
-  const positions = shuffle([...Array(81).keys()]);
-  let removed = 0;
-  const target = 81 - givens;
-
-  for (const pos of positions) {
-    if (removed >= target) break;
-    const backup = puzzle[pos];
-    puzzle[pos] = 0;
-    // Check unique solution
-    const sols = solve(puzzle, 2);
-    if (sols.length === 1) {
-      removed++;
-    } else {
-      puzzle[pos] = backup; // restore if not unique
+    if (best < 0) return true;
+    const r = ROW(best), c = COL(best), bx = BOX(best);
+    for (let n = 1; n <= 9; n++) {
+      const b = 1 << n;
+      if (!(bestMask & b)) continue;
+      g[best] = n; rows[r] |= b; cols[c] |= b; boxes[bx] |= b;
+      if (rec()) return true;
+      g[best] = 0; rows[r] &= ~b; cols[c] &= ~b; boxes[bx] &= ~b;
     }
-  }
-  return { puzzle, solution };
+    return false;
+  };
+  return rec() ? g : null;
 }
+
+/* ================================================================
+   STORAGE (all access guarded: private mode may throw)
+   ================================================================ */
+const store = {
+  get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const progressKey = (level, date) => `sudoku:${level}:${date}`;
+const LEVELS = ['easy', 'medium', 'hard'];
+const LEVEL_NAME = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+const settings = Object.assign(
+  { autoCheck: true, peers: true, sameDigits: true, autoNotes: true, showTimer: true },
+  store.get('sudoku:settings', {})
+);
 
 /* ================================================================
    STATE
    ================================================================ */
-const GIVENS = { easy: 36, medium: 28, hard: 22 };
-
 const state = {
-  puzzle:   new Array(81).fill(0),
-  solution: new Array(81).fill(0),
-  board:    new Array(81).fill(0),   // user's working board
-  notes:    Array.from({length: 81}, () => new Set()),
-  given:    new Array(81).fill(false),
-  selected: null,                    // index 0-80
+  level: 'easy',
+  date: null,
+  puzzle: [], solution: [], board: [], notes: [], // notes: bitmask per cell (bit n = digit n)
+  given: [],
+  selected: null,
   notesMode: false,
-  difficulty: 'easy',
-  mistakes: 0,
-  history: [],                       // for undo [{idx, prev, prevNotes}]
-  timerSecs: 0,
-  timerInterval: null,
+  mistakes: 0, hints: 0, secs: 0,
+  history: [],
   solved: false,
+  paused: false,
+  timer: null,
 };
 
-/* ================================================================
-   DOM HELPERS
-   ================================================================ */
 const $ = id => document.getElementById(id);
-const board = $('board');
-const numpad = $('numpad');
+const boardEl = $('board'), numpadEl = $('numpad');
+let cells = [], numBtns = [];
 
-let cells = [];
-
+/* ================================================================
+   BUILD DOM
+   ================================================================ */
 function buildBoard() {
-  board.innerHTML = '';
-  cells = [];
   for (let i = 0; i < 81; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    const row = Math.floor(i / 9) + 1;
-    cell.classList.add(`row-${row}`);
-    cell.dataset.idx = i;
-    cell.addEventListener('click', () => selectCell(i));
-    board.appendChild(cell);
-    cells.push(cell);
+    const el = document.createElement('div');
+    el.className = `cell r${ROW(i) + 1} c${COL(i) + 1}`;
+    el.setAttribute('role', 'gridcell');
+    el.addEventListener('pointerdown', e => { e.preventDefault(); select(i); });
+    boardEl.appendChild(el);
+    cells.push(el);
   }
 }
 
 function buildNumpad() {
-  numpad.innerHTML = '';
   for (let n = 1; n <= 9; n++) {
-    const btn = document.createElement('button');
-    btn.className = 'num-btn';
-    btn.dataset.n = n;
-    btn.textContent = n;
-    btn.addEventListener('click', () => inputNumber(n));
-    numpad.appendChild(btn);
+    const b = document.createElement('button');
+    b.className = 'num-btn';
+    b.innerHTML = `<span class="digit">${n}</span><span class="left"></span>`;
+    b.setAttribute('aria-label', `Digit ${n}`);
+    b.addEventListener('click', () => input(n));
+    numpadEl.appendChild(b);
+    numBtns.push(b);
   }
 }
 
 /* ================================================================
    RENDER
    ================================================================ */
-function render() {
-  // Count how many of each number are placed (givens + user)
+const valAt = i => state.given[i] ? state.puzzle[i] : state.board[i];
+
+function conflictsAt(i) {
+  const v = valAt(i);
+  return v && PEERS[i].some(j => valAt(j) === v);
+}
+
+function render(popIdx = -1) {
+  const sel = state.selected;
+  const selVal = sel !== null ? valAt(sel) : 0;
   const counts = new Array(10).fill(0);
+
   for (let i = 0; i < 81; i++) {
-    const v = state.given[i] ? state.puzzle[i] : state.board[i];
-    if (v) counts[v]++;
+    const v = valAt(i);
+    if (v && (!settings.autoCheck || state.given[i] || v === state.solution[i])) counts[v]++;
+    const el = cells[i];
+    const cls = ['cell', `r${ROW(i) + 1}`, `c${COL(i) + 1}`];
+    if (state.given[i]) cls.push('given');
+    const wrong = !state.given[i] && v && settings.autoCheck && v !== state.solution[i];
+    const conflict = v && !state.given[i] && (wrong || conflictsAt(i));
+
+    if (sel !== null && !state.solved) {
+      if (i === sel) cls.push('selected');
+      else if (settings.sameDigits && selVal && v === selVal) cls.push('same');
+      else if (settings.peers && (ROW(i) === ROW(sel) || COL(i) === COL(sel) || BOX(i) === BOX(sel))) cls.push('peer');
+    }
+    if (conflict && i !== sel) cls.push('conflict');
+    if (i === popIdx) cls.push('pop');
+    el.className = cls.join(' ');
+
+    let html = '';
+    if (v) {
+      html = `<span class="cell-num${state.given[i] ? '' : ' user'}${conflict ? ' error' : ''}">${v}</span>`;
+    } else if (state.notes[i]) {
+      html = '<div class="notes-grid">';
+      for (let d = 1; d <= 9; d++) {
+        const has = state.notes[i] & (1 << d);
+        const hl = has && settings.sameDigits && d === selVal;
+        html += `<span class="note-digit${hl ? ' hl' : ''}">${has ? d : ''}</span>`;
+      }
+      html += '</div>';
+    }
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.setAttribute('aria-label', `Row ${ROW(i) + 1}, column ${COL(i) + 1}, ${v || 'empty'}`);
   }
 
-  cells.forEach((cell, i) => {
-    // Clear
-    cell.className = 'cell';
-    const row = Math.floor(i / 9) + 1;
-    cell.classList.add(`row-${row}`);
-    cell.innerHTML = '';
-
-    const givenVal = state.given[i] ? state.puzzle[i] : 0;
-    const userVal  = state.given[i] ? 0 : state.board[i];
-    const val = givenVal || userVal;
-
-    // Highlights
-    if (state.selected !== null) {
-      const si = state.selected;
-      const sr = Math.floor(si / 9), sc = si % 9;
-      const r  = Math.floor(i  / 9), c  = i  % 9;
-      const sboxR = Math.floor(sr / 3), sboxC = Math.floor(sc / 3);
-      const boxR  = Math.floor(r  / 3), boxC  = Math.floor(c  / 3);
-
-      if (i === si) {
-        cell.classList.add('selected');
-      } else if (r === sr || c === sc || (boxR === sboxR && boxC === sboxC)) {
-        cell.classList.add('peer');
-      }
-
-      // Same number highlight
-      const selVal = state.given[si] ? state.puzzle[si] : state.board[si];
-      if (selVal && val === selVal) {
-        cell.classList.remove('peer');
-        if (i !== si) cell.classList.add('same');
-      }
-    }
-
-    // Error highlight
-    if (!state.given[i] && userVal && userVal !== state.solution[i]) {
-      cell.classList.add('error-cell');
-    }
-
-    // Content
-    if (val) {
-      const span = document.createElement('span');
-      span.className = 'cell-num';
-      span.textContent = val;
-      if (!state.given[i]) {
-        span.classList.add('user');
-        if (userVal !== state.solution[i]) span.classList.add('error');
-      }
-      cell.appendChild(span);
-    } else if (!state.given[i] && state.notes[i].size > 0) {
-      // Render notes
-      const ng = document.createElement('div');
-      ng.className = 'notes-grid';
-      for (let d = 1; d <= 9; d++) {
-        const nd = document.createElement('span');
-        nd.className = 'note-digit';
-        nd.textContent = state.notes[i].has(d) ? d : '';
-        ng.appendChild(nd);
-      }
-      cell.appendChild(ng);
-    }
+  numBtns.forEach((b, k) => {
+    const left = 9 - counts[k + 1];
+    b.classList.toggle('done', left <= 0);
+    b.querySelector('.left').textContent = left > 0 ? left : '';
   });
 
-  // Numpad: dim fully-placed numbers
-  numpad.querySelectorAll('.num-btn').forEach(btn => {
-    const n = +btn.dataset.n;
-    btn.classList.toggle('used', counts[n] >= 9);
-  });
-
-  // Mistakes
+  $('mistakes-label').hidden = !settings.autoCheck;
   $('mistakes-count').textContent = state.mistakes;
+  $('mistakes-label').classList.toggle('bad', state.mistakes > 0);
+  $('undo-btn').disabled = !state.history.length || state.solved;
+  $('hint-btn').disabled = state.solved;
+  $('auto-btn').disabled = state.solved;
+  $('erase-btn').disabled = state.solved;
+  $('notes-btn').disabled = state.solved;
+  document.body.classList.toggle('notes-on', state.notesMode);
+  $('notes-btn').classList.toggle('on', state.notesMode);
+  $('notes-btn').setAttribute('aria-pressed', state.notesMode);
+  $('notes-btn').querySelector('.badge').textContent = state.notesMode ? 'ON' : 'OFF';
+}
+
+function renderHeader() {
+  const d = new Date(state.date + 'T12:00:00');
+  const narrow = matchMedia('(max-width: 480px)').matches;
+  $('puzzle-date').textContent = d.toLocaleDateString(undefined, narrow
+    ? { weekday: 'short', month: 'short', day: 'numeric' }
+    : { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.level === state.level);
+    t.setAttribute('aria-selected', t.dataset.level === state.level);
+    const p = store.get(progressKey(t.dataset.level, state.date));
+    t.classList.toggle('done', !!(p && p.solved));
+  });
+  document.title = `Sudoku · ${LEVEL_NAME[state.level]} · ${state.date}`;
 }
 
 /* ================================================================
-   GAME LOGIC
+   GAME LIFECYCLE
    ================================================================ */
-function newGame(difficulty = state.difficulty) {
+const puzzlesFor = level => window.PUZZLES[level];
+const latestDate = level => puzzlesFor(level).at(-1)[0];
+
+function load(level, date) {
+  saveProgress();
   stopTimer();
-  state.difficulty = difficulty;
-  state.mistakes = 0;
+  const list = puzzlesFor(level);
+  const entry = list.find(p => p[0] === date) || list.at(-1);
+  state.level = level;
+  state.date = entry[0];
+  state.puzzle = [...entry[1]].map(Number);
+  state.given = state.puzzle.map(v => v !== 0);
+  state.solution = solveGrid(state.puzzle);
   state.selected = null;
   state.history = [];
+  state.paused = false;
   state.notesMode = false;
-  state.solved = false;
-  $('notes-btn').classList.remove('active');
-  $('congrats').classList.remove('show');
 
-  const givens = GIVENS[difficulty];
-  // Show loading feel (generation can take ~100-400ms)
-  const { puzzle, solution } = generatePuzzle(givens);
-  state.puzzle   = puzzle;
-  state.solution = solution;
-  state.board    = new Array(81).fill(0);
-  state.notes    = Array.from({length: 81}, () => new Set());
-  state.given    = puzzle.map(v => v !== 0);
-  render();
-  startTimer();
-  updateDiffButtons();
-}
-
-function selectCell(idx) {
-  if (state.solved) return;
-  state.selected = idx;
-  render();
-}
-
-function inputNumber(n) {
-  const idx = state.selected;
-  if (idx === null || state.given[idx] || state.solved) return;
-
-  if (state.notesMode) {
-    // Save history snapshot
-    state.history.push({ idx, prev: state.board[idx], prevNotes: new Set(state.notes[idx]) });
-    if (state.notes[idx].has(n)) {
-      state.notes[idx].delete(n);
-    } else {
-      state.notes[idx].add(n);
-    }
+  const saved = store.get(progressKey(state.level, state.date));
+  if (saved) {
+    state.board = saved.board;
+    state.notes = saved.notes;
+    state.mistakes = saved.mistakes || 0;
+    state.hints = saved.hints || 0;
+    state.secs = saved.secs || 0;
+    state.solved = !!saved.solved;
   } else {
-    if (state.board[idx] === n) return; // no-op
-    state.history.push({ idx, prev: state.board[idx], prevNotes: new Set(state.notes[idx]) });
-    if (state.board[idx] !== n && state.board[idx] !== state.solution[idx] && n !== state.solution[idx]) {
-      // wrong was there before, placing another wrong
-    }
-    const wasCorrect = state.board[idx] === state.solution[idx] && state.board[idx] !== 0;
-    state.board[idx] = n;
-    state.notes[idx].clear();
-    // Remove this number from notes in peers if placed correctly
-    if (n === state.solution[idx]) {
-      erasePeerNotes(idx, n);
-    } else {
-      state.mistakes++;
-    }
+    state.board = new Array(81).fill(0);
+    state.notes = new Array(81).fill(0);
+    state.mistakes = state.hints = state.secs = 0;
+    state.solved = false;
   }
+  store.set('sudoku:last', { level: state.level, date: state.date });
 
+  $('paused').classList.remove('show');
+  renderHeader();
   render();
-  checkWin();
+  updateTimer();
+  if (!state.solved) startTimer();
+  else toast(`Already solved in ${fmt(state.secs)}. Restart to play again.`);
 }
 
-function erasePeerNotes(idx, n) {
-  const r = Math.floor(idx / 9), c = idx % 9;
-  const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
-  for (let i = 0; i < 81; i++) {
-    const ri = Math.floor(i / 9), ci = i % 9;
-    if (i === idx) continue;
-    if (ri === r || ci === c || (Math.floor(ri/3)*3 === br && Math.floor(ci/3)*3 === bc)) {
-      state.notes[i].delete(n);
-    }
-  }
+function saveProgress() {
+  if (!state.date) return;
+  const started = state.secs > 0 || state.board.some(Boolean) || state.notes.some(Boolean);
+  if (!started && !state.solved) return;
+  store.set(progressKey(state.level, state.date), {
+    board: state.board, notes: state.notes,
+    mistakes: state.mistakes, hints: state.hints, secs: state.secs,
+    solved: state.solved, solvedAt: state.solved ? (store.get(progressKey(state.level, state.date))?.solvedAt || Date.now()) : undefined,
+  });
 }
 
-function eraseCell() {
-  const idx = state.selected;
-  if (idx === null || state.given[idx] || state.solved) return;
-  if (state.board[idx] === 0 && state.notes[idx].size === 0) return;
-  state.history.push({ idx, prev: state.board[idx], prevNotes: new Set(state.notes[idx]) });
-  state.board[idx] = 0;
-  state.notes[idx].clear();
-  render();
+function restart() {
+  if (state.board.some(Boolean) && !state.solved && !confirm('Clear the board and start this puzzle over?')) return;
+  const { level, date } = state;
+  try { localStorage.removeItem(progressKey(level, date)); } catch {}
+  state.date = null; // so load() doesn't re-save the progress we just cleared
+  load(level, date);
+}
+
+/** Next unsolved puzzle at this level, newest first, starting after the current date. */
+function nextPuzzle(level = state.level) {
+  const list = puzzlesFor(level);
+  const unsolved = list.filter(([d]) => !store.get(progressKey(level, d))?.solved && !(level === state.level && d === state.date));
+  if (!unsolved.length) { toast('You have solved every puzzle at this level!'); return; }
+  const older = unsolved.filter(([d]) => d < state.date);
+  const pick = (older.length ? older.at(-1) : unsolved.at(-1))[0];
+  closeModals();
+  load(level, pick);
+}
+
+/* ================================================================
+   HISTORY (full snapshots, so undo also restores auto-removed notes)
+   ================================================================ */
+function snapshot() {
+  state.history.push({ board: state.board.slice(), notes: state.notes.slice(), selected: state.selected });
+  if (state.history.length > 300) state.history.shift();
 }
 
 function undo() {
-  if (!state.history.length) return;
-  const { idx, prev, prevNotes } = state.history.pop();
-  state.board[idx] = prev;
-  state.notes[idx] = new Set(prevNotes);
-  state.selected = idx;
+  if (!state.history.length || state.solved) return;
+  const h = state.history.pop();
+  state.board = h.board;
+  state.notes = h.notes;
+  state.selected = h.selected;
   render();
+  saveProgress();
+}
+
+/* ================================================================
+   ACTIONS
+   ================================================================ */
+function select(i) {
+  if (state.paused) return;
+  state.selected = i;
+  render();
+}
+
+function canEdit() {
+  const i = state.selected;
+  return i !== null && !state.given[i] && !state.solved && !state.paused;
+}
+
+function input(n, asNote = state.notesMode) {
+  if (!canEdit()) {
+    // With nothing editable selected, a digit highlights where that digit sits.
+    if (state.selected === null && !state.solved && !state.paused) {
+      const first = cells.findIndex((_, i) => valAt(i) === n);
+      if (first >= 0) select(first);
+    }
+    return;
+  }
+  const i = state.selected;
+
+  if (asNote) {
+    if (state.board[i]) return;
+    snapshot();
+    state.notes[i] ^= 1 << n;
+    render();
+    saveProgress();
+    return;
+  }
+
+  if (state.board[i] === n) return;
+  snapshot();
+  state.board[i] = n;
+  state.notes[i] = 0;
+  const correct = n === state.solution[i];
+  if (settings.autoCheck && !correct) {
+    state.mistakes++;
+    boardEl.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 180 });
+  }
+  if (settings.autoNotes && (correct || !settings.autoCheck)) clearPeerNotes(i, n);
+  render(i);
+  if (correct) flashCompletedUnits(i);
+  checkWin();
+  saveProgress();
+}
+
+function clearPeerNotes(i, n) {
+  for (const j of PEERS[i]) state.notes[j] &= ~(1 << n);
+}
+
+function erase() {
+  if (!canEdit()) return;
+  const i = state.selected;
+  if (!state.board[i] && !state.notes[i]) return;
+  snapshot();
+  state.board[i] = 0;
+  state.notes[i] = 0;
+  render();
+  saveProgress();
+}
+
+function fillCandidates() {
+  if (state.solved || state.paused) return;
+  snapshot();
+  let changed = 0;
+  for (let i = 0; i < 81; i++) {
+    if (valAt(i)) continue;
+    let m = 0;
+    for (let n = 1; n <= 9; n++) if (!PEERS[i].some(j => valAt(j) === n)) m |= 1 << n;
+    if (m !== state.notes[i]) changed++;
+    state.notes[i] = m;
+  }
+  if (!changed) { state.history.pop(); toast('Candidates are already up to date'); return; }
+  render();
+  saveProgress();
+  toast('All candidates filled in');
 }
 
 function hint() {
-  if (state.solved) return;
-  // Find a random unfilled correct cell
-  const empties = [];
-  for (let i = 0; i < 81; i++) {
-    if (!state.given[i] && state.board[i] !== state.solution[i]) empties.push(i);
+  if (state.solved || state.paused) return;
+  let i = state.selected;
+  if (i === null || state.given[i] || state.board[i] === state.solution[i]) {
+    // Prefer the most constrained empty cell: the most useful nudge.
+    let best = -1, bestCount = 10;
+    for (let k = 0; k < 81; k++) {
+      if (state.given[k] || state.board[k] === state.solution[k]) continue;
+      const c = [1,2,3,4,5,6,7,8,9].filter(n => !PEERS[k].some(j => valAt(j) === n)).length;
+      if (c < bestCount) { best = k; bestCount = c; }
+    }
+    i = best;
   }
-  if (!empties.length) return;
-  const idx = empties[Math.floor(Math.random() * empties.length)];
-  state.history.push({ idx, prev: state.board[idx], prevNotes: new Set(state.notes[idx]) });
-  state.board[idx] = state.solution[idx];
-  state.notes[idx].clear();
-  erasePeerNotes(idx, state.solution[idx]);
-  state.selected = idx;
-  render();
+  if (i < 0) return;
+  snapshot();
+  state.selected = i;
+  state.board[i] = state.solution[i];
+  state.notes[i] = 0;
+  state.hints++;
+  if (settings.autoNotes) clearPeerNotes(i, state.solution[i]);
+  render(i);
+  flashCompletedUnits(i);
   checkWin();
+  saveProgress();
+}
+
+function toggleNotes() {
+  state.notesMode = !state.notesMode;
+  render();
+}
+
+function flashCompletedUnits(i) {
+  const units = [
+    [...Array(81).keys()].filter(j => ROW(j) === ROW(i)),
+    [...Array(81).keys()].filter(j => COL(j) === COL(i)),
+    [...Array(81).keys()].filter(j => BOX(j) === BOX(i)),
+  ];
+  for (const u of units) {
+    if (u.every(j => valAt(j) === state.solution[j])) {
+      u.forEach((j, k) => {
+        const el = cells[j];
+        el.classList.remove('flash');
+        void el.offsetWidth;
+        el.style.animationDelay = `${k * 25}ms`;
+        el.classList.add('flash');
+        setTimeout(() => { el.classList.remove('flash'); el.style.animationDelay = ''; }, 700 + k * 25);
+      });
+    }
+  }
 }
 
 function checkWin() {
-  for (let i = 0; i < 81; i++) {
-    const v = state.given[i] ? state.puzzle[i] : state.board[i];
-    if (v !== state.solution[i]) return;
-  }
+  for (let i = 0; i < 81; i++) if (valAt(i) !== state.solution[i]) return;
   state.solved = true;
   stopTimer();
-  const mins = Math.floor(state.timerSecs / 60);
-  const secs = state.timerSecs % 60;
-  $('congrats-msg').textContent =
-    `You completed the ${state.difficulty} puzzle in ${mins}:${String(secs).padStart(2,'0')} with ${state.mistakes} mistake${state.mistakes !== 1 ? 's' : ''}.`;
-  setTimeout(() => $('congrats').classList.add('show'), 300);
+  const prevBest = bestTime(state.level);
+  saveProgress();
+  state.selected = null;
+  render();
+
+  // Ripple out from the center before the dialog appears.
+  cells.forEach((el, i) => {
+    const dist = Math.abs(ROW(i) - 4) + Math.abs(COL(i) - 4);
+    el.style.animationDelay = `${dist * 55}ms`;
+    el.classList.add('wave');
+    setTimeout(() => { el.classList.remove('wave'); el.style.animationDelay = ''; }, 600 + dist * 55);
+  });
+
+  $('win-sub').textContent = `${LEVEL_NAME[state.level]} · ${new Date(state.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`;
+  $('win-time').textContent = fmt(state.secs);
+  $('win-mistakes').textContent = settings.autoCheck ? state.mistakes : '–';
+  $('win-hints').textContent = state.hints;
+  $('win-best').textContent = prevBest === null ? 'First solve at this level!' : state.secs < prevBest ? `New best time! (was ${fmt(prevBest)})` : '';
+  renderHeader();
+  setTimeout(() => openModal('win'), 1000);
 }
 
 /* ================================================================
    TIMER
    ================================================================ */
+const fmt = s => {
+  const h = (s / 3600) | 0, m = ((s % 3600) / 60) | 0, sec = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, '0')}` : m) + ':' + String(sec).padStart(2, '0');
+};
 function startTimer() {
-  state.timerSecs = 0;
-  updateTimerDisplay();
-  state.timerInterval = setInterval(() => {
-    state.timerSecs++;
-    updateTimerDisplay();
+  stopTimer();
+  state.timer = setInterval(() => {
+    state.secs++;
+    updateTimer();
+    if (state.secs % 10 === 0) saveProgress();
   }, 1000);
 }
-
-function stopTimer() {
-  clearInterval(state.timerInterval);
-  state.timerInterval = null;
+function stopTimer() { clearInterval(state.timer); state.timer = null; }
+function updateTimer() {
+  $('timer').textContent = fmt(state.secs);
+  $('timer').style.visibility = settings.showTimer ? '' : 'hidden';
 }
 
-function updateTimerDisplay() {
-  const m = Math.floor(state.timerSecs / 60);
-  const s = state.timerSecs % 60;
-  $('timer').textContent = `${m}:${String(s).padStart(2,'0')}`;
+function setPaused(p) {
+  if (state.solved) return;
+  state.paused = p;
+  $('paused').classList.toggle('show', p);
+  $('paused-sub').textContent = `${LEVEL_NAME[state.level]} · ${fmt(state.secs)}`;
+  $('pause-btn').innerHTML = `<svg class="icon"><use href="#i-${p ? 'play' : 'pause'}"/></svg>`;
+  $('pause-btn').setAttribute('aria-label', p ? 'Resume' : 'Pause');
+  if (p) { stopTimer(); saveProgress(); } else startTimer();
 }
 
 /* ================================================================
-   DIFFICULTY BUTTONS
+   MODALS
    ================================================================ */
-function updateDiffButtons() {
-  document.querySelectorAll('.diff-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.diff === state.difficulty);
+let pausedByModal = false;
+function openModal(id) {
+  closeModals();
+  if (id === 'archive') renderArchive(state.level);
+  if (id === 'stats') renderStats();
+  if (id !== 'win' && !state.paused && !state.solved) { pausedByModal = true; stopTimer(); }
+  $('toast').classList.remove('show');
+  $(id).classList.add('show');
+  $(id).querySelector('button')?.focus();
+}
+function closeModals() {
+  document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  if (pausedByModal) { pausedByModal = false; if (!state.paused && !state.solved) startTimer(); }
+}
+
+let archiveLevel = 'easy';
+function renderArchive(level) {
+  archiveLevel = level;
+  document.querySelectorAll('#archive-seg button').forEach(b => b.classList.toggle('active', b.dataset.level === level));
+  const list = puzzlesFor(level);
+  const byMonth = new Map();
+  let solved = 0;
+  for (const [d] of list) {
+    const key = d.slice(0, 7);
+    if (!byMonth.has(key)) byMonth.set(key, new Set());
+    byMonth.get(key).add(d);
+    if (store.get(progressKey(level, d))?.solved) solved++;
+  }
+  $('archive-count').textContent = `${solved} of ${list.length} solved`;
+  const dow = ['S','M','T','W','T','F','S'].map(x => `<span>${x}</span>`).join('');
+  let html = '';
+  for (const [key, dates] of [...byMonth].reverse()) {
+    const [y, m] = key.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    const days = new Date(y, m, 0).getDate();
+    let grid = '<span></span>'.repeat(first.getDay());
+    for (let day = 1; day <= days; day++) {
+      const d = `${key}-${String(day).padStart(2, '0')}`;
+      if (!dates.has(d)) { grid += `<button class="day" disabled>${day}</button>`; continue; }
+      const p = store.get(progressKey(level, d));
+      const cls = p?.solved ? 'solved' : p ? 'progress' : '';
+      const cur = level === state.level && d === state.date ? ' current' : '';
+      grid += `<button class="day ${cls}${cur}" data-date="${d}" aria-label="${d}${p?.solved ? ', solved' : p ? ', in progress' : ''}">${day}</button>`;
+    }
+    html += `<div class="month"><h3>${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3><div class="dow">${dow}</div><div class="days">${grid}</div></div>`;
+  }
+  $('archive-months').innerHTML = html;
+}
+
+function levelStats(level) {
+  const times = [];
+  let started = 0;
+  for (const [d] of puzzlesFor(level)) {
+    const p = store.get(progressKey(level, d));
+    if (!p) continue;
+    started++;
+    if (p.solved) times.push(p.secs);
+  }
+  return { started, solved: times.length, best: times.length ? Math.min(...times) : null,
+           avg: times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null };
+}
+const bestTime = level => levelStats(level).best;
+
+function renderStats() {
+  $('stats-body').innerHTML = LEVELS.map(l => {
+    const s = levelStats(l);
+    return `<div class="month"><h3>${LEVEL_NAME[l]}</h3><div class="stats-grid">
+      <div class="win-stat"><b>${s.solved}</b><span>Solved</span></div>
+      <div class="win-stat"><b>${s.best === null ? '–' : fmt(s.best)}</b><span>Best</span></div>
+      <div class="win-stat"><b>${s.avg === null ? '–' : fmt(s.avg)}</b><span>Average</span></div>
+    </div></div>`;
+  }).join('');
+}
+
+/* ================================================================
+   SETTINGS & THEME
+   ================================================================ */
+function applyTheme(dark) {
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#121212' : '#ffffff';
+  $('dark-toggle').checked = dark;
+}
+function initSettings() {
+  const saved = store.get('sudoku:theme', null);
+  applyTheme(saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+  $('dark-toggle').addEventListener('change', e => { applyTheme(e.target.checked); store.set('sudoku:theme', e.target.checked ? 'dark' : 'light'); });
+  document.querySelectorAll('[data-setting]').forEach(inp => {
+    inp.checked = settings[inp.dataset.setting];
+    inp.addEventListener('change', () => {
+      settings[inp.dataset.setting] = inp.checked;
+      store.set('sudoku:settings', settings);
+      render(); updateTimer();
+    });
   });
 }
 
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
 /* ================================================================
-   KEYBOARD INPUT
+   INPUT WIRING
    ================================================================ */
 document.addEventListener('keydown', e => {
-  if (state.solved) return;
-
-  const idx = state.selected;
-
-  // Arrow navigation
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
-    e.preventDefault();
-    if (idx === null) { selectCell(40); return; }
-    const r = Math.floor(idx / 9), c = idx % 9;
-    let nr = r, nc = c;
-    if (e.key === 'ArrowUp')    nr = Math.max(0, r - 1);
-    if (e.key === 'ArrowDown')  nr = Math.min(8, r + 1);
-    if (e.key === 'ArrowLeft')  nc = Math.max(0, c - 1);
-    if (e.key === 'ArrowRight') nc = Math.min(8, c + 1);
-    selectCell(nr * 9 + nc);
+  if (document.querySelector('.modal.show')) {
+    if (e.key === 'Escape') closeModals();
     return;
   }
+  if (e.target.closest('input')) return;
+  const k = e.key;
+  const mod = e.ctrlKey || e.metaKey;
 
-  if (e.key >= '1' && e.key <= '9') inputNumber(+e.key);
-  if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') eraseCell();
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
-  if (e.key === 'n' || e.key === 'N') toggleNotes();
+  if (mod && k.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if (mod || e.altKey) return;
+  if (k === 'p' || k === 'P') { setPaused(!state.paused); return; }
+  if (state.paused) { if (k === 'Escape' || k === ' ') setPaused(false); return; }
+
+  const arrows = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  if (arrows[k]) {
+    e.preventDefault();
+    if (state.selected === null) { select(40); return; }
+    const [dr, dc] = arrows[k];
+    const r = (ROW(state.selected) + dr + 9) % 9, c = (COL(state.selected) + dc + 9) % 9;
+    select(r * 9 + c);
+    return;
+  }
+  // e.code keeps Shift+digit working on layouts where Shift changes the key.
+  const digit = /^Digit([1-9])$|^Numpad([1-9])$/.exec(e.code);
+  if (digit) { e.preventDefault(); input(+(digit[1] || digit[2]), e.shiftKey !== state.notesMode); return; }
+  if (k === 'Backspace' || k === 'Delete' || k === '0') { e.preventDefault(); erase(); return; }
+  if (k === 'n' || k === 'N' || k === ' ') { e.preventDefault(); toggleNotes(); return; }
+  if (k === 'h' || k === 'H') { hint(); return; }
+  if (k === 'Escape') { state.selected = null; render(); }
 });
 
-/* ================================================================
-   NOTES MODE
-   ================================================================ */
-function toggleNotes() {
-  state.notesMode = !state.notesMode;
-  $('notes-btn').classList.toggle('active', state.notesMode);
-}
-
-/* ================================================================
-   DARK MODE
-   ================================================================ */
-function initTheme() {
-  const saved = localStorage.getItem('sudoku-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = saved ? saved === 'dark' : prefersDark;
-  document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
-  $('theme-btn').textContent = isDark ? '☀️' : '🌙';
-}
-
-function toggleTheme() {
-  const isDark = document.documentElement.dataset.theme === 'dark';
-  const next = isDark ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  $('theme-btn').textContent = next === 'dark' ? '☀️' : '🌙';
-  try { localStorage.setItem('sudoku-theme', next); } catch(e) {}
-}
-
-/* ================================================================
-   WIRING
-   ================================================================ */
-document.querySelectorAll('.diff-btn').forEach(btn => {
-  btn.addEventListener('click', () => newGame(btn.dataset.diff));
+// Deselect when tapping outside the board and controls.
+document.addEventListener('pointerdown', e => {
+  if (state.selected === null) return;
+  if (e.target.closest('#board, .side-col, .modal, header, .tabs-wrap')) return;
+  state.selected = null;
+  render();
 });
-$('new-game-btn').addEventListener('click', () => newGame());
-$('play-again-btn').addEventListener('click', () => newGame());
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !state.paused && !state.solved && !document.querySelector('.modal.show')) setPaused(true);
+  if (document.hidden) saveProgress();
+});
+window.addEventListener('pagehide', saveProgress);
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  if (t.dataset.level === state.level) return;
+  // Same date on the other level if we have it, otherwise that level's newest.
+  const has = puzzlesFor(t.dataset.level).some(p => p[0] === state.date);
+  load(t.dataset.level, has ? state.date : latestDate(t.dataset.level));
+}));
+
 $('undo-btn').addEventListener('click', undo);
-$('erase-btn').addEventListener('click', eraseCell);
+$('erase-btn').addEventListener('click', erase);
 $('notes-btn').addEventListener('click', toggleNotes);
+$('auto-btn').addEventListener('click', fillCandidates);
 $('hint-btn').addEventListener('click', hint);
-$('theme-btn').addEventListener('click', toggleTheme);
+$('pause-btn').addEventListener('click', () => setPaused(!state.paused));
+$('resume-btn').addEventListener('click', () => setPaused(false));
+$('restart-btn').addEventListener('click', restart);
+$('next-btn').addEventListener('click', () => nextPuzzle());
+$('win-next-btn').addEventListener('click', () => nextPuzzle());
+$('archive-btn').addEventListener('click', () => openModal('archive'));
+$('stats-btn').addEventListener('click', () => openModal('stats'));
+$('settings-btn').addEventListener('click', () => openModal('settings'));
+$('help-btn').addEventListener('click', () => openModal('help'));
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openModal(b.dataset.open)));
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
 
-// Close congrats on overlay click
-$('congrats').addEventListener('click', e => {
-  if (e.target === $('congrats')) $('congrats').classList.remove('show');
+$('archive-seg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) renderArchive(b.dataset.level); });
+$('archive-months').addEventListener('click', e => {
+  const b = e.target.closest('.day[data-date]');
+  if (!b) return;
+  closeModals();
+  load(archiveLevel, b.dataset.date);
+});
+$('random-btn').addEventListener('click', () => {
+  const pool = puzzlesFor(archiveLevel).filter(([d]) => !store.get(progressKey(archiveLevel, d))?.solved);
+  if (!pool.length) { toast('Every puzzle at this level is solved!'); return; }
+  closeModals();
+  load(archiveLevel, pool[(Math.random() * pool.length) | 0][0]);
 });
 
 /* ================================================================
    INIT
    ================================================================ */
-initTheme();
+initSettings();
 buildBoard();
 buildNumpad();
-newGame('easy');
+const last = store.get('sudoku:last', null);
+const startLevel = last && LEVELS.includes(last.level) ? last.level : 'easy';
+load(startLevel, last?.date || latestDate(startLevel));
+if (!store.get('sudoku:seen-help', false)) { store.set('sudoku:seen-help', true); openModal('help'); }
 </script>
 </body>
 </html>
