@@ -492,7 +492,7 @@
       <button class="tool-btn" id="undo-btn"><svg class="icon"><use href="#i-undo"/></svg>Undo</button>
       <button class="tool-btn" id="erase-btn"><svg class="icon"><use href="#i-erase"/></svg>Erase</button>
       <button class="tool-btn" id="notes-btn" aria-pressed="false"><svg class="icon"><use href="#i-pencil"/></svg>Notes<span class="badge">OFF</span></button>
-      <button class="tool-btn" id="auto-btn" title="Fill in every possible candidate"><svg class="icon"><use href="#i-grid"/></svg>Candidates</button>
+      <button class="tool-btn" id="auto-btn" aria-pressed="false" title="Auto-candidate mode: show every possible digit"><svg class="icon"><use href="#i-grid"/></svg>Candidates<span class="badge">OFF</span></button>
       <button class="tool-btn" id="hint-btn"><svg class="icon"><use href="#i-bulb"/></svg>Hint</button>
     </div>
     <div id="numpad"></div>
@@ -576,7 +576,7 @@
       <h3>Tips</h3>
       <ul>
         <li>Turn on <b>Notes</b> (or hold <kbd>Shift</kbd>) to pencil in candidates.</li>
-        <li><b>Candidates</b> fills every legal note at once, which helps on Hard puzzles.</li>
+        <li><b>Candidates</b> turns auto-candidate mode on: every legal note is filled in and kept up to date as you play. Turn it off to get your own notes back.</li>
         <li><b>Hint</b> reveals the selected cell, or a random one if nothing is selected.</li>
         <li>Your progress saves automatically. Pick up any day from the <b>Archive</b>.</li>
       </ul>
@@ -660,6 +660,8 @@ const state = {
   given: [],
   selected: null,
   notesMode: false,
+  autoCands: false,   // auto-candidate mode
+  manualNotes: null,  // the player's own notes, kept aside while auto mode is on
   mistakes: 0, hints: 0, secs: 0,
   history: [],
   solved: false,
@@ -758,6 +760,9 @@ function render(popIdx = -1) {
   $('undo-btn').disabled = !state.history.length || state.solved;
   $('hint-btn').disabled = state.solved;
   $('auto-btn').disabled = state.solved;
+  $('auto-btn').classList.toggle('on', state.autoCands);
+  $('auto-btn').setAttribute('aria-pressed', state.autoCands);
+  $('auto-btn').querySelector('.badge').textContent = state.autoCands ? 'ON' : 'OFF';
   $('erase-btn').disabled = state.solved;
   $('notes-btn').disabled = state.solved;
   document.body.classList.toggle('notes-on', state.notesMode);
@@ -806,6 +811,8 @@ function load(level, date) {
   if (saved) {
     state.board = saved.board;
     state.notes = saved.notes;
+    state.autoCands = !!saved.autoCands;
+    state.manualNotes = saved.manualNotes || null;
     state.mistakes = saved.mistakes || 0;
     state.hints = saved.hints || 0;
     state.secs = saved.secs || 0;
@@ -813,6 +820,8 @@ function load(level, date) {
   } else {
     state.board = new Array(81).fill(0);
     state.notes = new Array(81).fill(0);
+    state.autoCands = false;
+    state.manualNotes = null;
     state.mistakes = state.hints = state.secs = 0;
     state.solved = false;
   }
@@ -832,6 +841,7 @@ function saveProgress() {
   if (!started && !state.solved) return;
   store.set(progressKey(state.level, state.date), {
     board: state.board, notes: state.notes,
+    autoCands: state.autoCands, manualNotes: state.manualNotes,
     mistakes: state.mistakes, hints: state.hints, secs: state.secs,
     solved: state.solved, solvedAt: state.solved ? (store.get(progressKey(state.level, state.date))?.solvedAt || Date.now()) : undefined,
   });
@@ -860,7 +870,10 @@ function nextPuzzle(level = state.level) {
    HISTORY (full snapshots, so undo also restores auto-removed notes)
    ================================================================ */
 function snapshot() {
-  state.history.push({ board: state.board.slice(), notes: state.notes.slice(), selected: state.selected });
+  state.history.push({
+    board: state.board.slice(), notes: state.notes.slice(), selected: state.selected,
+    autoCands: state.autoCands, manualNotes: state.manualNotes && state.manualNotes.slice(),
+  });
   if (state.history.length > 300) state.history.shift();
 }
 
@@ -870,6 +883,8 @@ function undo() {
   state.board = h.board;
   state.notes = h.notes;
   state.selected = h.selected;
+  state.autoCands = h.autoCands;
+  state.manualNotes = h.manualNotes;
   render();
   saveProgress();
 }
@@ -917,7 +932,7 @@ function input(n, asNote = state.notesMode) {
     state.mistakes++;
     boardEl.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 180 });
   }
-  if (settings.autoNotes && (correct || !settings.autoCheck)) clearPeerNotes(i, n);
+  if ((settings.autoNotes || state.autoCands) && (correct || !settings.autoCheck)) clearPeerNotes(i, n);
   render(i);
   if (correct) flashCompletedUnits(i);
   checkWin();
@@ -925,7 +940,11 @@ function input(n, asNote = state.notesMode) {
 }
 
 function clearPeerNotes(i, n) {
-  for (const j of PEERS[i]) state.notes[j] &= ~(1 << n);
+  for (const j of PEERS[i]) {
+    state.notes[j] &= ~(1 << n);
+    if (state.manualNotes && settings.autoNotes) state.manualNotes[j] &= ~(1 << n);
+  }
+  if (state.manualNotes) state.manualNotes[i] = 0;
 }
 
 function erase() {
@@ -934,26 +953,34 @@ function erase() {
   if (!state.board[i] && !state.notes[i]) return;
   snapshot();
   state.board[i] = 0;
-  state.notes[i] = 0;
+  state.notes[i] = state.autoCands ? candidatesAt(i) : 0;
   render();
   saveProgress();
 }
 
-function fillCandidates() {
+function candidatesAt(i) {
+  let m = 0;
+  for (let n = 1; n <= 9; n++) if (!PEERS[i].some(j => valAt(j) === n)) m |= 1 << n;
+  return m;
+}
+
+/** Auto-candidate mode: on fills every legal note; off restores the player's own notes. */
+function toggleCandidates() {
   if (state.solved || state.paused) return;
   snapshot();
-  let changed = 0;
-  for (let i = 0; i < 81; i++) {
-    if (valAt(i)) continue;
-    let m = 0;
-    for (let n = 1; n <= 9; n++) if (!PEERS[i].some(j => valAt(j) === n)) m |= 1 << n;
-    if (m !== state.notes[i]) changed++;
-    state.notes[i] = m;
+  if (!state.autoCands) {
+    state.manualNotes = state.notes.slice();
+    state.notes = state.notes.map((_, i) => valAt(i) ? 0 : candidatesAt(i));
+    state.autoCands = true;
+    toast('Auto candidates on');
+  } else {
+    state.notes = state.manualNotes.map((m, i) => valAt(i) ? 0 : m);
+    state.manualNotes = null;
+    state.autoCands = false;
+    toast('Auto candidates off: your notes are back');
   }
-  if (!changed) { state.history.pop(); toast('Candidates are already up to date'); return; }
   render();
   saveProgress();
-  toast('All candidates filled in');
 }
 
 function hint() {
@@ -975,7 +1002,7 @@ function hint() {
   state.board[i] = state.solution[i];
   state.notes[i] = 0;
   state.hints++;
-  if (settings.autoNotes) clearPeerNotes(i, state.solution[i]);
+  if (settings.autoNotes || state.autoCands) clearPeerNotes(i, state.solution[i]);
   render(i);
   flashCompletedUnits(i);
   checkWin();
@@ -1231,7 +1258,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 $('undo-btn').addEventListener('click', undo);
 $('erase-btn').addEventListener('click', erase);
 $('notes-btn').addEventListener('click', toggleNotes);
-$('auto-btn').addEventListener('click', fillCandidates);
+$('auto-btn').addEventListener('click', toggleCandidates);
 $('hint-btn').addEventListener('click', hint);
 $('pause-btn').addEventListener('click', () => setPaused(!state.paused));
 $('resume-btn').addEventListener('click', () => setPaused(false));
