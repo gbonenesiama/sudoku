@@ -283,9 +283,7 @@
     @media (min-width: 900px) { .num-btn { aspect-ratio: 1.15; font-size: 2.1rem; } }
     .num-btn:hover  { background: var(--key-hover); }
     .num-btn:active { transform: scale(.94); }
-    .num-btn .left { font-size: .7rem; font-weight: 700; color: var(--muted); margin-top: 4px; }
     .num-btn.done { opacity: .35; }
-    .num-btn.done .left { visibility: hidden; }
     body.notes-on .num-btn { color: var(--accent); }
     body.notes-on .num-btn .digit { font-size: .72em; font-weight: 500; }
 
@@ -691,7 +689,7 @@ function buildNumpad() {
   for (let n = 1; n <= 9; n++) {
     const b = document.createElement('button');
     b.className = 'num-btn';
-    b.innerHTML = `<span class="digit">${n}</span><span class="left"></span>`;
+    b.innerHTML = `<span class="digit">${n}</span>`;
     b.setAttribute('aria-label', `Digit ${n}`);
     b.addEventListener('click', () => input(n));
     numpadEl.appendChild(b);
@@ -751,7 +749,6 @@ function render(popIdx = -1) {
   numBtns.forEach((b, k) => {
     const left = 9 - counts[k + 1];
     b.classList.toggle('done', left <= 0);
-    b.querySelector('.left').textContent = left > 0 ? left : '';
   });
 
   $('mistakes-label').hidden = !settings.autoCheck;
