@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#fbfaf6" />
   <title>Sudoku</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,31 +17,31 @@
     /* Palette mirrors NYT Games Sudoku: white board, near-black givens,
        blue entries, yellow selection, grey peers, red conflicts. */
     :root {
-      --bg:          #ffffff;
-      --surface:     #ffffff;
-      --surface-2:   #f4f4f4;
-      --line:        #a3a3a3;
-      --line-strong: #121212;
-      --text:        #121212;
-      --muted:       #5a5a5a;
-      --given:       #121212;
-      --accent:      #346eb7;
-      --user-num:    #346eb7;
-      --error:       #e0303b;
-      --note:        #4a4a4a;
-      --sel-bg:      #f8cd05;
-      --sel-text:    #121212;
-      --peer-bg:     #e2e2e2;
-      --same-bg:     #c9dcf3;
-      --same-note:   #1f5aa6;
-      --error-bg:    #ffd9dc;
-      --success:     #1e8a4c;
-      --btn:         #121212;
-      --btn-text:    #ffffff;
-      --key-bg:      #dfdfdf;
-      --key-hover:   #d0d0d0;
-      --key-border:  #979797;
-      --shadow:      0 10px 40px rgba(18,18,18,.22);
+      --bg:          #fbfaf6;
+      --surface:     #fffdf9;
+      --surface-2:   #f2efe6;
+      --line:        #c7c0b0;
+      --line-strong: #2e2b26;
+      --text:        #2e2b26;
+      --muted:       #857e6f;
+      --given:       #2e2b26;
+      --accent:      #3f6fa8;
+      --user-num:    #3f6fa8;
+      --error:       #c6453e;
+      --note:        #8a8372;
+      --sel-bg:      #e8923d;
+      --sel-text:    #2e2b26;
+      --peer-bg:     #e6dfcf;
+      --same-bg:     #f0c988;
+      --same-note:   #a15a16;
+      --error-bg:    #f3d6c8;
+      --success:     #4d8a5e;
+      --btn:         #2e2b26;
+      --btn-text:    #fffdf9;
+      --key-bg:      #ece5d6;
+      --key-hover:   #e0d7c2;
+      --key-border:  #c6bda5;
+      --shadow:      0 10px 40px rgba(46,43,38,.18);
       --radius:      10px;
       --sans:        'Libre Franklin', 'Franklin Gothic Medium', 'Helvetica Neue', Arial, sans-serif;
       --serif:       'Zilla Slab', 'Rockwell', Georgia, serif;
@@ -62,11 +62,11 @@
       --user-num:    #7fb2ee;
       --error:       #ff6b74;
       --note:        #d0d0d0;
-      --sel-bg:      #f8cd05;
-      --sel-text:    #121212;
+      --sel-bg:      #c97a2e;
+      --sel-text:    #f8f8f8;
       --peer-bg:     #363636;
-      --same-bg:     #2a4a75;
-      --same-note:   #9cc4f2;
+      --same-bg:     #5a4320;
+      --same-note:   #f2c48a;
       --error-bg:    #5a2226;
       --success:     #4cc07c;
       --btn:         #f8f8f8;
@@ -1170,7 +1170,7 @@ function renderStats() {
    ================================================================ */
 function applyTheme(dark) {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.querySelector('meta[name=theme-color]').content = dark ? '#121212' : '#ffffff';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#121212' : '#fbfaf6';
   $('dark-toggle').checked = dark;
 }
 function initSettings() {
